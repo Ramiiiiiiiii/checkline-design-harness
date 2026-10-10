@@ -22,26 +22,26 @@ description: 체크라인 디자인 하네스를 실행·재개한다. "○○ �
 
 | 현재 게이트 | 부를 에이전트 | 저장 폴더 | 판정 후 |
 | --- | --- | --- | --- |
-| g1 | researcher | `runs/<slug>/p1-diagnosis/` | 통과 시 요약 보고 → 사용자 "진행해" → `proceed` |
-| g2 | spec-writer | `runs/<slug>/p2-spec/` | 통과 시 요약 보고 → 사용자 "진행해" → `proceed` |
+| g1 | researcher | `runs/<slug>/p1-diagnosis/` | 통과 시 요약 보고 → 사용자가 직접 `! node harness/scripts/verify.mjs proceed <slug>` |
+| g2 | spec-writer | `runs/<slug>/p2-spec/` | 통과 시 요약 보고 → 사용자가 직접 `! node harness/scripts/verify.mjs proceed <slug>` |
 | g3 | concept-designer | `runs/<slug>/p3-concept/` | 통과 시 시안 3개 스크린샷과 concepts.md 요약을 보여주고 approval.md 작성을 요청 |
 | g3-approval | (없음) | — | judge 판정. 반려면 스크립트가 알려준 게이트로 |
 | g4 | expander | `runs/<slug>/p4-expand/` | 통과 시 바로 g5 |
 | g5 | (없음) | — | judge 판정 → qa-report.md 요약 보고 → 사용자 최종 확인 |
 
 각 게이트에서:
-1. 작업 에이전트를 부릅니다. 프롬프트에 slug, 현재 게이트, 읽을 파일 경로, (실패 재시도라면) judge가 보고한 위반 항목을 그대로 넣습니다.
+1. 작업 에이전트를 부릅니다. 프롬프트에 slug, 현재 게이트, 읽을 파일 경로, (실패 재시도라면) judge가 보고한 위반 항목을 그대로 넣습니다. g3·g4 에서는 먼저 `node harness/scripts/verify.mjs figma-code <g3|g4> <slug> --mode export` 를 직접 실행해 출력된 export 코드를 프롬프트에 그대로 붙입니다 (작업 에이전트에게는 Bash 가 없습니다).
 2. 반환된 `=== FILE: <이름> ===` 블록을 **Write 도구로** 현재 게이트 폴더에 그대로 저장합니다. 내용을 고치거나 요약하지 않습니다. Bash로 runs/에 쓰지 않습니다.
 3. `judge`를 불러 판정합니다.
 4. 종료 코드에 따라:
    - 0 통과 → 표의 "판정 후"
    - 1 실패 → 위반 항목을 담아 같은 에이전트를 다시 부름 (g5 실패는 expander)
    - 2 전제 오류 → 메시지대로 고치고(사용자 결정이 필요하면 묻기) 다시 판정
-   - 3 차단 → 멈추고 사용자에게 보고. 사용자가 요청할 때만 `unblock`
+   - 3 차단 → 멈추고 사용자에게 보고. 사용자가 직접 `unblock` 실행 (에이전트는 실행 불가)
 
 ## 3. 사람 확인 지점
-- **approval.md는 사람만 씁니다.** 사용자가 대화로 "B로 할게"라고 하면, `runs/<slug>/p3-concept/approval.md`를 직접 작성해 달라고 안내하고 템플릿(`harness/templates/approval.md`)을 보여줍니다. 대신 써 주지 않습니다 (hook이 막음).
-- G1·G2 통과 후의 "진행해"는 승인이 아니라 확인입니다. 사용자가 수정을 원하면 `verify.mjs reopen <slug> --from <g1|g2>`로 그 게이트를 다시 연 뒤, 수정 요청을 담아 해당 에이전트를 다시 부르고 재판정합니다. 승인(g3-approval) 이후에는 reopen이 안 되고 approval.md 반려 절차를 씁니다.
+- **approval.md는 사람만 씁니다.** 사용자가 대화로 "B로 할게"라고 하면, `runs/<slug>/p3-concept/approval.md`를 직접 작성해 달라고 안내하고 템플릿(`harness/templates/approval.md`)을 보여줍니다. 대신 써 주지 않습니다 (hook이 막음). 사용자가 다 썼으면 **사용자가 직접** `! node harness/scripts/verify.mjs sign <slug>` 로 서명하게 안내합니다 — 서명이 없거나 서명 뒤 파일이 바뀌면 g3-approval 은 대기합니다.
+- G1·G2 통과 후의 "진행해"는 승인이 아니라 확인입니다. 사용자가 수정을 원하면 사용자가 `! node harness/scripts/verify.mjs reopen <slug> --from <g1|g2|g3>`로 그 게이트를 다시 연 뒤, 수정 요청을 담아 해당 에이전트를 다시 부르고 재판정합니다. 승인(g3-approval) 이후에는 reopen이 안 되고 approval.md 반려 절차를 씁니다.
 
 ## 4. 보고
 - 게이트마다 한두 줄로: 통과/실패, 위반 수, 다음 할 일.
