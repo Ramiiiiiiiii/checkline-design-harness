@@ -1,0 +1,132 @@
+<title>체크라인 수리 배정 구성안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 구성안 설명 + 1440 기준 목업(화면 폭에 맞춰 축소) */
+:root{--pg:#EEEFF1;--pg-fg:#171719;--pg-sub:#6E7076;--pg-line:#D9DADD;--pg-card:#FFFFFF;--pg-acc:#0066FF;--font:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pg:#101112;--pg-fg:#F2F3F4;--pg-sub:#9A9CA2;--pg-line:#2C2D31;--pg-card:#1B1C1E;--pg-acc:#3385FF;color-scheme:dark}}
+:root[data-theme="dark"]{--pg:#101112;--pg-fg:#F2F3F4;--pg-sub:#9A9CA2;--pg-line:#2C2D31;--pg-card:#1B1C1E;--pg-acc:#3385FF;color-scheme:dark}
+body{background:var(--pg);color:var(--pg-fg);font-family:var(--font);font-size:14px;line-height:1.5}
+.wrap{max-width:1480px;margin:0 auto;padding-inline:20px;padding-block:28px 48px;display:grid;gap:18px}
+h1{font-size:22px;margin:0 0 4px} .top p{margin:0;color:var(--pg-sub);max-width:75ch}
+.bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.seg{display:flex;gap:4px;background:var(--pg-card);border:1px solid var(--pg-line);border-radius:12px;padding:4px}
+.seg button{font:inherit;border:0;background:transparent;color:var(--pg-sub);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--pg-fg);color:var(--pg-card)}
+button:focus-visible{outline:2px solid var(--pg-acc);outline-offset:2px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.notes div{background:var(--pg-card);border:1px solid var(--pg-line);border-radius:12px;padding:14px 16px;min-width:0}
+.notes b{display:block;margin-bottom:4px} .notes ul{margin:0;padding-left:18px;color:var(--pg-sub);display:grid;gap:4px}
+.fit{width:100%;overflow:hidden;border-radius:12px;border:1px solid var(--pg-line)}
+.stage{width:1440px;transform-origin:top left}
+/* 목업 — 원티드 Theme 근사 */
+.mock{--primary:#0066FF;--label:#171719;--neutral:#46474C;--alt:#8A8B90;--assist:#C2C4C8;--bg:#FFFFFF;--bg-alt:#F0F0F2;--line:#E8E9EB;--fill:#F2F3F4;--neg:#FF4242;--cau:#FF9200;--ina:#A3A5AA;--vio:#6541F2;--pos:#00BF40;--sel:#171719;
+ background:var(--bg-alt);color:var(--label);font-family:var(--font);display:grid;grid-template-columns:216px 1fr;min-height:860px}
+.mock.dark{--primary:#3385FF;--label:#F4F4F5;--neutral:#C2C4C8;--alt:#8D8F95;--assist:#4A4B50;--bg:#212225;--bg-alt:#1B1B1D;--line:#2E2F33;--fill:#2A2B2E;--neg:#FF6363;--cau:#FFA938;--ina:#70737C;--vio:#8E73FF;--pos:#1ED45A;--sel:#F4F4F5}
+.mock *{box-sizing:border-box}
+.side{background:var(--bg);padding:28px 14px;display:flex;flex-direction:column;gap:2px}
+.logo{font-weight:700;font-size:17px;color:var(--primary);padding:0 10px 22px}
+.nav{padding:10px 12px;border-radius:10px;color:var(--alt);font-weight:500;font-size:15px}
+.nav.on{background:var(--fill);color:var(--label);font-weight:700}
+.main{padding:28px 36px 36px;display:grid;gap:18px;align-content:start;min-width:0}
+.crumb{font-size:13px;color:var(--alt)} .crumb b{color:var(--neutral);font-weight:500}
+.head{display:flex;align-items:center;gap:16px}
+.head h2{margin:0;font-size:24px}
+.st{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:14px;color:var(--neg)}
+.el{margin-left:auto;text-align:right}
+.el b{font-size:15px;color:var(--neg)} .el small{display:block;color:var(--alt);font-size:12px}
+.prog{height:6px;width:220px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px;margin-left:auto}
+.prog i{display:block;height:100%;width:83%;background:var(--neutral)}
+.cols{display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start}
+.card{background:var(--bg);border-radius:16px;padding:24px;display:grid;gap:18px;min-width:0}
+.ct{font-size:17px;font-weight:700;display:flex;gap:8px;align-items:baseline}
+.ct small{font-size:13px;font-weight:500;color:var(--alt)}
+.tag{font-size:11px;font-weight:700;color:var(--primary)}
+.step{display:grid;gap:10px}
+.step h4{margin:0;font-size:15px;display:flex;gap:8px;align-items:center}
+.step h4 span{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--label);display:grid;place-items:center;font-size:12px}
+.segc{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.segc div{padding:12px;text-align:center;font-weight:500;color:var(--neutral);border-right:1px solid var(--line)}
+.segc div:last-child{border-right:0}
+.segc .on{background:var(--sel);color:var(--bg);font-weight:700}
+.hint{font-size:13px;color:var(--alt)}
+.hint b{color:var(--neg)}
+.people{display:grid;gap:8px}
+.p{display:grid;grid-template-columns:20px 120px 1fr 120px;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.p.on{border:2px solid var(--sel);padding:11px 13px}
+.radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--assist)}
+.p.on .radio{border:5px solid var(--sel)}
+.p .nm{font-weight:700} .p .nm small{display:block;font-weight:400;color:var(--alt);font-size:12px}
+.load{display:flex;gap:3px;align-items:center}
+.load i{width:22px;height:10px;border-radius:3px;background:var(--fill)}
+.load i.f{background:var(--neutral)}
+.p .s{font-size:13px;color:var(--alt);text-align:right}
+.memo{border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--assist);font-size:14px;min-height:72px}
+.act{display:flex;gap:10px;justify-content:flex-end}
+.btn{border-radius:10px;padding:12px 20px;font-weight:700;border:1px solid var(--line);color:var(--label)}
+.btn.p1{background:var(--primary);border-color:var(--primary);color:#fff}
+.photo{height:180px;border-radius:12px;background:var(--fill);display:grid;place-items:center;color:var(--alt);font-size:13px}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:8px 12px;font-size:14px}
+.kv dt{color:var(--alt)} .kv dd{margin:0}
+.tl{display:grid;gap:12px}
+.tl .r{display:grid;grid-template-columns:72px 10px 1fr;gap:10px;align-items:start;font-size:13px}
+.tl .r i{width:10px;height:10px;border-radius:50%;background:var(--assist);margin-top:4px}
+.tl .r.now i{background:var(--neg)}
+.tl .d{color:var(--alt)}
+.mock.show-focus .focus{outline:2px dashed var(--primary);outline-offset:6px}
+</style>
+<div class="wrap">
+ <header class="top"><h1>수리 배정 · 구성안</h1><p>대시보드의 '수리 배정하기'를 누르면 열리는 서브페이지예요. PRD §6-5(위험 등급 확정 + 수리 담당자 배정)를 그대로 화면으로 옮겼고, 기획에 없는 요소는 [추가 제안]으로 표시했어요. Figma 전 확인용이에요.</p></header>
+ <div class="bar">
+  <div class="seg"><button id="m-light" data-m="light" aria-pressed="true">Light</button><button id="m-dark" data-m="dark" aria-pressed="false">Dark</button></div>
+  <div class="seg"><button id="m-focus" aria-pressed="false">[주목] 영역 표시</button></div>
+ </div>
+ <div class="notes">
+  <div><b>시선이 가는 곳 [주목]</b><ul><li>왼쪽 '배정' 카드 하나. 위에서 아래로 ① 위험 등급 확정 → ② 담당자 선택 → ③ 메모 → 배정하기</li></ul></div>
+  <div><b>기획 그대로 (PRD)</b><ul><li>위험 등급 낮음/보통/즉시 정지, 작업자 판단값을 기본 선택 (§6-3)</li><li>즉시 정지로 확정하면 대시보드·작업자 화면에 가동 정지 표시 (§6-5, ★1)</li><li>오른쪽: 이상 보고 원본(사진·메모·보고자·시각) — 수정 불가 (§7-1)</li></ul></div>
+  <div><b>[추가 제안]</b><ul><li>목표 30분 대비 경과 막대 — PRD §9 지표(보고→배정 30분)를 화면에 노출</li><li>담당자별 현재 작업량 막대 — 누구에게 줄지 판단 근거</li><li>이 설비 최근 이력 타임라인</li></ul></div>
+ </div>
+ <div class="fit" id="fit"><div class="stage" id="stage"></div></div>
+</div>
+<script>
+const html = () => `
+<aside class="side"><div class="logo">✓ 체크라인</div>${["대시보드","설비","점검 기록","이상 보고","수리","담당자","설정"].map((l,i)=>`<div class="nav${i===4?" on":""}">${l}</div>`).join("")}</aside>
+<section class="main">
+ <div class="crumb">설비 현황 › 이상 보고 › <b>수리 배정</b></div>
+ <div class="head"><h2>프레스 3호기 · A라인</h2><span class="st">⚠ 가동 정지</span>
+  <div class="el"><b>긴급 · 25분 경과</b><small>목표 30분까지 5분 남음 <span class="tag">[추가 제안]</span></small><div class="prog"><i></i></div></div></div>
+ <div class="cols">
+  <div class="card focus">
+   <div class="ct">수리 배정</div>
+   <div class="step"><h4><span>1</span>위험 등급 확정</h4>
+    <div class="segc"><div>낮음</div><div>보통</div><div class="on">즉시 정지</div></div>
+    <div class="hint">작업자 판단: 즉시 정지 · <b>즉시 정지로 확정하면 대시보드와 작업자 화면에 '가동 정지'로 표시돼요</b></div></div>
+   <div class="step"><h4><span>2</span>수리 담당자 <span class="tag" style="border:0;width:auto;height:auto">[추가 제안] 현재 작업량</span></h4>
+    <div class="people">
+     ${[["박수리","설비보전팀 · A·B라인",1,"대기 중",1],["이정비","설비보전팀 · 전 라인",3,"수리 중 · 컨베이어 2",0],["최용접","외주 · 용접 전담",2,"수리 중 · 용접로봇 4",0]].map(p=>`<div class="p${p[4]?" on":""}"><i class="radio"></i><div class="nm">${p[0]}<small>${p[1]}</small></div><div class="load">${[0,1,2,3].map(k=>`<i class="${k<p[2]?"f":""}"></i>`).join("")}<span style="margin-left:6px;font-size:13px;color:var(--alt)">${p[2]}건</span></div><div class="s">${p[3]}</div></div>`).join("")}
+    </div></div>
+   <div class="step"><h4><span>3</span>메모 (선택)</h4><div class="memo">담당자에게 전달할 내용</div></div>
+   <div class="act"><span class="btn">취소</span><span class="btn p1">박수리에게 배정하기</span></div>
+  </div>
+  <div style="display:grid;gap:20px">
+   <div class="card"><div class="ct">이상 보고 <small>수정 불가 원본</small></div>
+    <div class="photo">현장 사진 1 / 2</div>
+    <dl class="kv"><dt>보고자</dt><dd>김현장 · 10:42 · 현장 태블릿</dd><dt>항목</dt><dd>진동 · 소음</dd><dt>메모</dt><dd>가동 중 진동이 평소보다 심하고 금속 긁히는 소리</dd><dt>작업자 판단</dt><dd><span class="st" style="font-size:13px">⚠ 즉시 정지</span></dd></dl></div>
+   <div class="card"><div class="ct">이 설비 최근 이력 <span class="tag">[추가 제안]</span></div>
+    <div class="tl">
+     <div class="r now"><span class="d">오늘 10:42</span><i></i><span>이상 보고 · 진동 이상 (지금 이 건)</span></div>
+     <div class="r"><span class="d">9/29</span><i></i><span>수리 완료 · 유압 호스 교체 · 박수리</span></div>
+     <div class="r"><span class="d">9/12</span><i></i><span>이상 보고 · 유압 누유</span></div>
+    </div></div>
+  </div>
+ </div>
+</section>`;
+let mode="light", focus=false;
+const stage=document.getElementById("stage"), fit=document.getElementById("fit");
+function render(){ stage.innerHTML=`<div class="mock${mode==="dark"?" dark":""}${focus?" show-focus":""}">${html()}</div>`; scale(); }
+function scale(){ const s=Math.min(1,fit.clientWidth/1440); stage.style.transform=`scale(${s})`; fit.style.height=(stage.offsetHeight*s)+"px"; }
+document.querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click",()=>{mode=b.dataset.m;document.querySelectorAll("[data-m]").forEach(x=>x.setAttribute("aria-pressed",x===b));render();}));
+document.getElementById("m-focus").addEventListener("click",e=>{focus=!focus;e.currentTarget.setAttribute("aria-pressed",focus);render();});
+new ResizeObserver(scale).observe(fit); render(); document.fonts&&document.fonts.ready.then(scale);
+</script>

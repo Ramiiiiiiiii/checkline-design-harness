@@ -1,0 +1,47 @@
+# 체크라인 디자인 하네스 — 기본값
+# 사용자가 따로 정하지 않았을 때 쓰는 값. 값마다 출처(source)를 붙인다.
+#   source: design.md | r2~r8 | 사용자 | 임의
+#   임의 = AI가 정한 값 → 사람이 확인해야 함 (r8-verify 체크리스트)
+
+figma:
+  ds_file:
+    value: "0Xe79q36WZfpTxZa0R2g16" # 원티드 DS 키트(Community 복제본)
+    source: 사용자
+  work_file:
+    value: "0Xe79q36WZfpTxZa0R2g16" # 라이브러리 발행 없이 키트 파일 안에 P3·P4 페이지 추가 (r4 대안)
+    source: 사용자
+  frame_gap:
+    value: 200 # 같은 페이지 프레임 사이 가로 간격(px)
+    source: 임의
+  label_offset:
+    value: 80 # 프레임 위 라벨 텍스트 높이(px)
+    source: 임의
+
+p1:
+  as_is:
+    value: "종이 점검표 + 엑셀 취합 + 메신저 수리 요청"
+    source: r2-purpose.md
+  uibowl_queries:
+    value: ["관리자 대시보드", "현황 대시보드 표", "설비 상태 모니터링", "작업 현황 리스트"]
+    source: 임의
+
+p2:
+  dashboard_blocks:
+    value: [오늘 점검 현황 요약, 가동 정지 설비, 이상 보고 목록, 미점검 설비, 수리 진행]
+    source: prd.md §6-4 + r2-purpose.md
+  table_row_height:
+    value: 48 # List Cell Medium
+    source: design.md 5-1
+
+p3:
+  concept_axes:
+    value: ["문제 우선(위험 먼저 보이는 구조)", "라인 중심(공간 배치)", "흐름 중심(점검→이상→수리 파이프라인)"]
+    source: 임의
+
+p4:
+  mobile_dashboard_pattern:
+    value: "표 대신 상태별 카드 리스트 (List Card + Content Badge)"
+    source: 임의
+  tablet_columns:
+    value: 2
+    source: 임의

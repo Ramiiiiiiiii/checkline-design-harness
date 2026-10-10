@@ -1,0 +1,191 @@
+# 체크라인 디자인 하네스 — 규칙 SSOT
+# 판정 스크립트(harness/scripts/verify.mjs)는 이 파일만 기준으로 판정한다.
+# docs/design.md · docs/story-service.md 는 사람이 읽는 설명 문서다.
+# 그 문서의 수치를 바꾸면 이 파일도 함께 고친다. (추적표: harness/traceability.md)
+
+version: 1
+
+run:
+  runs_dir: runs
+  slug_pattern: "^[a-z0-9][a-z0-9-]*$"
+  max_attempts: 3 # 같은 게이트 연속 실패 한도 → blocked
+  placeholder_pattern: "\\{\\{[^}]*\\}\\}" # 템플릿 미작성 표시
+
+gates:
+  order: [g1, g2, g3, g3-approval, g4, g5]
+  dirs: # 게이트별 산출물 폴더 (null = 저장할 산출물 없음)
+    g1: p1-diagnosis
+    g2: p2-spec
+    g3: p3-concept
+    g3-approval: null
+    g4: p4-expand
+    g5: null
+  review_after: [g1, g2] # 통과 후 사용자 "진행해" 필요 (verify.mjs proceed)
+  reopenable: [g1, g2, g3] # 승인 전 수정 → 재판정 (P3 3차: G3 통과 후 승인 전에 시안을 고친 경우)
+  work_agents: [researcher, spec-writer, concept-designer, expander]
+
+# ─────────────────────────────────────────────
+# G1 — P1 진단
+# ─────────────────────────────────────────────
+g1:
+  files: [diagnosis.md, references.md]
+  diagnosis:
+    heading: "^###\\s+D(\\d+)\\."
+    min: 5
+    required_lines: ["관점\\s*[:：]", "근거\\s*[:：]", "영향\\s*[:：]"]
+    perspectives: [정보 구조, 작업 흐름, 사용 환경, 시각 위계]
+  references:
+    heading: "^###\\s+R(\\d+)\\.\\s*([^—\\-]+?)\\s*[—\\-]"
+    min: 6
+    url_pattern: "https?://(www\\.)?uibowl\\.io/\\S+"
+    max_same_app: 2
+  points:
+    heading: "^###\\s+RP-(\\d+)\\."
+    min: 3
+    source_pattern: "출처\\s*[:：].*?\\bR(\\d+)\\b"
+
+# ─────────────────────────────────────────────
+# G2 — P2 설계
+# ─────────────────────────────────────────────
+g2:
+  files: [screen-spec.md]
+  required_sections: [목적, 연결 유저스토리, 화면 구성, 상태, 데이터 필드, 추가 제안]
+  story_pattern: "\\bUS-([1-5])\\b"
+  # ★1 가동 정지 — 상태 섹션에 행이 있고, 같은 행에 아이콘과 텍스트 명시
+  stop_status:
+    section: 상태
+    keyword: 가동 정지
+    must_include: [아이콘, 텍스트]
+  # ★2 제출 기록 수정 금지 — 화면 구성에서 '기록' 행에 수정·삭제 금지 (정정은 허용)
+  record_immutable:
+    section: 화면 구성
+    trigger: 기록
+    forbidden: [수정, 삭제]
+    allowed_if: 정정
+  # 임의 기획 방지 — MVP 제외 기능은 [추가 제안] 표기 또는 '제외' 언급 줄에서만
+  excluded_keywords: [월별 리포트, 가동률 리포트, 부품 재고, 예방 정비, IoT, 센서]
+  proposal_tag: "[추가 제안]"
+  excluded_ok_words: [제외]
+
+# ─────────────────────────────────────────────
+# Figma 공통 (G3 · G4 · G5)
+# ─────────────────────────────────────────────
+figma:
+  export_file: figma-export.json
+  require_digest: true # judge가 Figma에서 다시 계산한 지문과 export 지문이 같아야 함
+  # design.md 2장 — 허용 변수 (Theme 컬렉션 이름)
+  allowed_color_variables:
+    - Primary/Normal
+    - Primary/Strong
+    - Label/Normal
+    - Label/Strong
+    - Label/Neutral
+    - Label/Alternative
+    - Label/Assistive
+    - Label/Disable
+    - Background/Normal/Normal
+    - Background/Normal/Alternative
+    - Background/Elevated/Normal
+    - Line/Normal/Normal
+    - Line/Solid/Normal
+    - Fill/Normal
+    - Fill/Alternative # 페이지 바탕을 살짝 어둡게 (Background/Normal/Alternative 위에 겹침, P3 3차 사용자 요청)
+    - Interaction/Disable
+    - Material/Dimmer
+    - Status/Positive
+    - Status/Cautionary
+    - Status/Negative
+    - Interaction/Inactive
+    - Accent/Foreground/Violet
+    - Static/White
+    - Static/Black
+  # design.md 3장 — 허용 텍스트 스타일 (이름 접두)
+  allowed_text_styles:
+    - "Display 1/" # 히어로 숫자 1곳 전용 (P3 3차, 사용자 확정 A 히어로)
+    - "Title 3/"
+    - "Heading 1/"
+    - "Heading 2/"
+    - "Headline 1/"
+    - "Body 1/Normal"
+    - "Body 2/Normal"
+    - "Label 1/Normal"
+    - "Label 2/"
+    - "Caption 1/"
+  # 글꼴 예외 (사용자 결정 2026-10-10): Figma 서버 환경에 Pretendard JP가 없어 텍스트 스타일을 적용할 수 없음.
+  # 텍스트 스타일이 없을 때는 ① 레이어 이름이 허용 스타일 이름으로 시작하고 ② 대체 글꼴·크기·행간·굵기가 그 스타일 값과 같으면 통과.
+  # Pretendard가 Figma 조직 글꼴로 올라오면 레이어 이름으로 스타일을 다시 연결하고 enabled: false 로 끈다.
+  text_fallback:
+    enabled: true
+    font: Noto Sans KR
+    weight_map: { Regular: Regular, Medium: Medium, Bold: Bold } # 원티드 SemiBold(600)는 Bold로 대체
+    line_height_tolerance: 0.6 # % 단위
+    specs: # 스타일 접두: [크기, 행간 %]  (원티드 DS Text Styles 값)
+      "Display 1/": [56, 128.6]
+      "Title 3/": [24, 133.4]
+      "Heading 1/": [22, 136.4]
+      "Heading 2/": [20, 140]
+      "Headline 1/": [18, 144.5]
+      "Body 1/Normal": [16, 150]
+      "Body 2/Normal": [15, 146.7]
+      "Label 1/Normal": [14, 142.9]
+      "Label 2/": [13, 138.5]
+      "Caption 1/": [12, 133.4]
+  field_min_font_size: 14 # 현장 프레임(태블릿·모바일)에서 Caption 1 외 최소 크기
+  field_small_ok_styles: ["Caption 1/"]
+  # design.md 4장
+  allowed_spacing: [0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 48, 56, 64, 72, 80]
+  allowed_radius: [0, 4, 8, 10, 12, 14, 16, 20, 24, 28, 32, 9999]
+  field_frame_widths: [1280, 360] # 현장 프레임 판별
+  min_touch_height: 48
+  interactive_components: ["Button/", "Segmented Control/", "Chip/", "Control/", "Select/", "Textinput/", "List Cell/", "Tab/"]
+  icon_component_prefix: ["Icon/", "Icons/"]
+  # ★1 — 가동 정지 텍스트 옆 아이콘
+  stop_text: 가동 정지
+  stop_label_max_len: 10 # 이 길이 이하 텍스트만 "상태 라벨"로 보고 검사 (설명 문장은 제외) — P3 실행 중 보완
+  # design.md 5-2 ⑥ — 로컬 컴포넌트는 DS 없음 표기
+  local_component_tag: "[DS 없음"
+  # 시안 품질 하한 (사용자 결정 2026-10-10, P3 1차 반려 후 추가): 프레임마다 시각화 요소(차트·진행 막대·히트맵 등) 최소 개수
+  viz_tag: "[시각화]"
+  min_viz_per_frame: 1
+  # P3 2차 반려 후 추가 (사용자 2026-10-10 17:11 "어디에 집중해야 할지 모르겠어 / 빨간 보더 금지 / 아이콘 옅은 배경 빼")
+  no_status_stroke_prefix: "Status/" # ⑩ 카드·영역에 상태 색 테두리 금지 (DS 인스턴스 제외)
+  no_translucent_outside_viz: true # ⑪ [시각화] 밖에서 레이어 불투명도 < 1 금지 (아이콘·배지 뒤 옅은 바탕 차단)
+  focus_tag: "[주목]" # ⑫ 시선이 갈 영역 — 프레임마다 정확히 focus_per_frame 개
+  focus_per_frame: 1
+
+g3:
+  page: P3 시안
+  frames:
+    count: 3
+    size: [1920, 1080] # 너비 정확히, 높이는 최소값
+    name_prefixes: ["A-", "B-", "C-"]
+  concepts:
+    file: concepts.md
+    concept_heading: "^##\\s+시안\\s+([ABC])\\b"
+    solved_pattern: "^\\s*[-*]\\s*해결한 문제\\s*[:：]"
+    min_solved: 2
+    proposal_section: "^##\\s+추가 제안"
+
+g3_approval:
+  file: approval.md
+  choice_pattern: "선택\\s*[:：]\\s*([ABC])\\b"
+  verdict_pattern: "판정\\s*[:：]\\s*(승인|반려)"
+  reason_pattern: "반려 사유 분류\\s*[:：]\\s*(방향|문제 정의)"
+  lock_files: [p2-spec/screen-spec.md, p3-concept/concepts.md, p3-concept/approval.md]
+  return_to: { 방향: g3, 문제 정의: g2 }
+
+g4:
+  page: P4 확장
+  frames:
+    required: # 이름 접미사 / 크기(너비 정확히, 높이는 최소값 — 세로 스크롤 허용) / 모드
+      - { name: "Web/Light", size: [1920, 1080], mode: Light }
+      - { name: "Web/Dark", size: [1920, 1080], mode: Dark }
+      - { name: "Tablet/Light", size: [1280, 800], mode: Light }
+      - { name: "Tablet/Dark", size: [1280, 800], mode: Dark }
+      - { name: "Mobile/Light", size: [360, 740], mode: Light }
+      - { name: "Mobile/Dark", size: [360, 740], mode: Dark }
+  screens_file: screens.md
+
+g5:
+  report_file: qa-report.md
+  report_dir: p5-qa

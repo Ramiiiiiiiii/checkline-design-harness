@@ -1,0 +1,7 @@
+{
+  "name": "checkline-design-harness",
+  "private": true,
+  "type": "module",
+  "description": "체크라인 디자인 하네스 — 판정·hook 스크립트 의존성",
+  "dependencies": { "yaml": "^2.5.0" }
+}

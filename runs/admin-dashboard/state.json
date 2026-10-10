@@ -1,0 +1,110 @@
+{
+  "slug": "admin-dashboard",
+  "topic": "관리자 설비 현황 대시보드",
+  "figma": "https://www.figma.com/design/0Xe79q36WZfpTxZa0R2g16/Wanted-Design-System--Community-",
+  "fileKey": "0Xe79q36WZfpTxZa0R2g16",
+  "created": "2026-10-10T07:16:54.105Z",
+  "passed": [
+    "g1",
+    "g2",
+    "g3",
+    "g3-approval",
+    "g4",
+    "g5"
+  ],
+  "attempts": {
+    "g1": 0,
+    "g2": 0,
+    "g3": 0,
+    "g3-approval": 0,
+    "g4": 0,
+    "g5": 0
+  },
+  "awaiting": null,
+  "blocked": null,
+  "approval": {
+    "choice": "A",
+    "at": "2026-10-10T08:48:08.454Z",
+    "hashes": {
+      "p2-spec/screen-spec.md": "7591e26c080cb309",
+      "p3-concept/concepts.md": "8dfcaaada6896a1a",
+      "p3-concept/approval.md": "a00c74987678e444"
+    }
+  },
+  "done": true,
+  "log": [
+    {
+      "at": "2026-10-10T07:17:45.932Z",
+      "event": "pass",
+      "gate": "g1"
+    },
+    {
+      "at": "2026-10-10T07:22:10.126Z",
+      "event": "pass",
+      "gate": "g2"
+    },
+    {
+      "at": "2026-10-10T07:26:25.310Z",
+      "event": "reopen",
+      "from": "g2"
+    },
+    {
+      "at": "2026-10-10T07:26:25.407Z",
+      "event": "pass",
+      "gate": "g2"
+    },
+    {
+      "at": "2026-10-10T07:47:18.301Z",
+      "event": "pass",
+      "gate": "g3"
+    },
+    {
+      "at": "2026-10-10T07:54:37.087Z",
+      "event": "rejected",
+      "reason": "방향",
+      "back": "g3"
+    },
+    {
+      "at": "2026-10-10T08:06:44.666Z",
+      "event": "pass",
+      "gate": "g3"
+    },
+    {
+      "at": "2026-10-10T08:11:40.008Z",
+      "event": "rejected",
+      "reason": "방향",
+      "back": "g3"
+    },
+    {
+      "at": "2026-10-10T08:35:56.771Z",
+      "event": "pass",
+      "gate": "g3"
+    },
+    {
+      "at": "2026-10-10T08:46:08.943Z",
+      "event": "reopen",
+      "from": "g3"
+    },
+    {
+      "at": "2026-10-10T08:48:08.350Z",
+      "event": "pass",
+      "gate": "g3"
+    },
+    {
+      "at": "2026-10-10T08:48:08.455Z",
+      "event": "pass",
+      "gate": "g3-approval"
+    },
+    {
+      "at": "2026-10-10T08:53:40.897Z",
+      "event": "pass",
+      "gate": "g4"
+    },
+    {
+      "at": "2026-10-10T08:53:41.008Z",
+      "event": "pass",
+      "gate": "g5"
+    }
+  ],
+  "updated": "2026-10-10T08:53:41.008Z"
+}

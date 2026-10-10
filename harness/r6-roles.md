@@ -1,0 +1,37 @@
+# R6 — 역할
+
+> 인터뷰 라운드 R6 확정본 (기본값 승인, 2026-10-10)
+
+## 에이전트
+
+| 에이전트 | Phase | 편집 폴더 (오케스트레이터가 저장) | 도구 | 읽기 전용 |
+| --- | --- | --- | --- | --- |
+| `researcher` | P1 | `runs/<slug>/p1-diagnosis/` | UIBowl MCP | docs/, harness/ |
+| `spec-writer` | P2 | `runs/<slug>/p2-spec/` | 없음 | docs/, harness/, p1 |
+| `concept-designer` | P3 | `runs/<slug>/p3-concept/` (approval.md 제외) + Figma `P3 시안` | Figma MCP | docs/, harness/, p1, p2 |
+| `expander` | P4 | `runs/<slug>/p4-expand/` + Figma `P4 확장` | Figma MCP | docs/, harness/, p1~p3 |
+| `judge` | 모든 게이트 | **없음** | `verify.mjs` 판정 명령 + Figma 읽기 | 전부 |
+
+## 쓰기 규칙
+
+- 작업 에이전트는 파일을 직접 쓰지 않는다. `=== FILE: <파일명> ===` 블록으로 반환하고, 오케스트레이터(메인 세션)가 **내용을 고치지 않고** 현재 게이트 폴더에만 저장한다.
+- 에이전트는 자기 Figma 페이지 밖의 노드를 만들거나 지우지 않는다.
+
+| 파일 | 쓰는 주체 |
+| --- | --- |
+| `docs/*`, `harness/rules.yaml`, `harness/defaults.yaml`, `harness/templates/*` | 사람만 (하네스 실행 중 수정 금지) |
+| `runs/<slug>/p3-concept/approval.md` | 사람만 |
+| `runs/<slug>/state.json`, `runs/<slug>/p5-qa/qa-report.md` | 스크립트만 |
+| 그 외 `runs/<slug>/p*/` | 오케스트레이터 (현재 게이트 폴더만) |
+
+## 강제 장치 (hook)
+
+- `PreToolUse(Write|Edit)` → `guard-write.mjs`: 위 표를 어기는 쓰기 차단, 현재 게이트가 아닌 runs 폴더 쓰기 차단
+- `PreToolUse(Agent|Task)` → `guard-review.mjs`: 사람 확인 대기(`awaiting`) 중에는 작업 에이전트 호출 차단
+- `judge` 에이전트 → `guard-judge-bash.mjs`: `node harness/scripts/verify.mjs ...` 판정 명령만 허용
+
+## 자연어 트리거 → `run-harness` 스킬
+
+- "○○ 화면 하네스 돌려줘 / 시작해줘 / 만들어줘"
+- "이어서 해줘", "하네스 상태 알려줘"
+- "A/B/C로 할게", "승인했어", "반려야", "approval.md 썼어"
