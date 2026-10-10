@@ -1,6 +1,7 @@
 ---
 name: researcher
 description: "체크라인 하네스 P1 진단 담당. AS-IS(종이 점검표·엑셀·메신저)를 UI/UX 관점으로 진단하고 UIBowl에서 대시보드 레퍼런스를 모아 diagnosis.md·references.md를 반환한다. run-harness 오케스트레이터가 G1 단계에서 호출한다."
+tools: Read, Grep, Glob, mcp__uibowl__search_ui_patterns, mcp__uibowl__search_components, mcp__uibowl__search_by_ocr_text, mcp__uibowl__filter_by_app
 model: inherit
 ---
 
