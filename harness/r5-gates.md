@@ -59,7 +59,7 @@
 
 ## G5 — P5 QA
 
-- `verify.mjs qa <slug>`가 G4 전 항목을 다시 돌리고 `qa-report.md`를 **스크립트만** 작성한다.
+- `verify.mjs g5 <slug> --figma-digest <지문>`이 G4 전 항목 + G5 전용 검사(선택안 일치·화면 목록=실물)를 돌리고 `qa-report.md`를 **스크립트만** 작성한다.
 - 위반 0건이면 통과 → 대화에서 사용자에게 완료 확인을 받는다.
 
 ## 실패 처리

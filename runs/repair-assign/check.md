@@ -7,9 +7,10 @@
 | --- | --- |
 | Figma 파일 | Checkline (사용자 새 파일) · 페이지 "Page 1"(대시보드) + "수리 배정" |
 | 구성안 | deliverables/repair-assign-plan.html |
-| 검사 코드 | harness/figma-build/checkline-rule-check.figma.js (rules.yaml figma 섹션 + figma-check.lib.js, 모든 페이지 대상) |
+| 검사 코드 | 생성기로 만든 코드: `verify.mjs figma-code g4 admin-dashboard --mode export --page all` (rules.yaml figma 섹션 + figma-check.lib.js, ★1·★2 원문 검사 포함) |
 | 검사 프레임 | 12장 (대시보드 6 + 수리 배정 6, Web·Tablet·Mobile × Light·Dark) |
-| 결과 | ✅ 위반 0건 (2026-10-10 18:30) |
+| 결과 | ✅ 위반 0건 — `figma-check.json` (지문 eebf8680-2650-e828e029, 2026-10-10 21:42 재검사) |
+| 한계 | 게이트 밖 점검이라 judge 의 지문 재계산·사람 승인은 없음. 1차 점검(18:30)은 손으로 고친 코드였고, 2차 보강에서 생성 코드로 다시 돌림 |
 
 ## [추가 제안] (PRD에 없는 요소, 표시 유지)
 - 목표 30분 대비 경과 막대 (PRD §9 지표를 화면에 노출)

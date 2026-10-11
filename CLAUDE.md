@@ -39,23 +39,30 @@
 | `spec-writer` | P2 | `runs/<slug>/p2-spec/` | — |
 | `concept-designer` | P3 | `runs/<slug>/p3-concept/` + Figma `P3 시안` | Figma MCP |
 | `expander` | P4 | `runs/<slug>/p4-expand/` + Figma `P4 확장` | Figma MCP |
-| `judge` | 모든 게이트 | 없음 (판정 명령만) | verify.mjs, Figma 읽기 |
+| `judge` | 모든 게이트 | 없음 (판정 명령만) | Read, verify.mjs 판정 명령, Figma 지문 코드 |
 
 ## 명령
 
 ```bash
-node harness/scripts/verify.mjs init <slug> --topic "<화면 주제>" --figma <Figma URL>
-node harness/scripts/verify.mjs <g1|g2|g3-approval> <slug>
-node harness/scripts/verify.mjs <g3|g4|g5> <slug> --figma-digest <지문>   # judge가 Figma에서 계산한 지문
-node harness/scripts/verify.mjs figma-code <g3|g4|g5> <slug> [--mode export]  # Figma 검사 코드 (export=작업 에이전트, 기본=judge 지문)
+# 메인 세션(오케스트레이터)
+node harness/scripts/verify.mjs init <slug> --topic "<화면 주제>" --figma <Figma URL (? 뒤는 빼고)>
+node harness/scripts/verify.mjs figma-code <g3|g4> <slug> --mode export   # 작업 에이전트에게 넘길 export 코드
 node harness/scripts/verify.mjs status <slug>
-node harness/scripts/verify.mjs proceed <slug>   # G1·G2 통과 후 사용자가 "진행해"라고 했을 때만
-node harness/scripts/verify.mjs reopen <slug> --from <g1|g2>   # G1·G2 확인 중 사용자가 수정을 요청했을 때
-node harness/scripts/verify.mjs unblock <slug>   # 사용자가 요청할 때만
+# judge 만 (guard-bash 가 agent_type 으로 확인)
+node harness/scripts/verify.mjs <g1|g2|g3-approval> <slug>
+node harness/scripts/verify.mjs figma-code <g3|g4|g5> <slug>               # 지문 코드
+node harness/scripts/verify.mjs <g3|g4|g5> <slug> --figma-digest <지문>
+# ↓ 사람 전용 — 에이전트 Bash 는 guard-bash.mjs 가 막음. 사람이 터미널 또는 '! node …' 로 직접 실행
+node harness/scripts/verify.mjs proceed <slug>   # G1·G2 통과 후 "진행해"
+node harness/scripts/verify.mjs reopen <slug> --from <g1|g2|g3>   # 승인 전 수정 요청 → 재판정
+node harness/scripts/verify.mjs unblock <slug>   # 연속 실패 차단 해제
+node harness/scripts/verify.mjs sign <slug>      # approval.md 를 사람이 확인했다는 서명 (g3-approval 전 필수)
 node tests/run.mjs                               # 판정 스크립트 테스트
 ```
 
 처음 받은 환경에서는 `cd harness && npm install` 을 한 번 실행합니다.
+
+규칙·hook·에이전트 정의(`harness/`·`docs/`·`.claude/`·`tests/`·`CLAUDE.md`)를 고칠 때는 사람이 `HARNESS_DEV=1 claude` 로 세션을 띄웁니다. 그 밖에는 hook 이 수정을 막습니다 (실행 중에는 HARNESS_DEV 여도 막음).
 
 ## 진행 규칙
 
@@ -71,10 +78,10 @@ node tests/run.mjs                               # 판정 스크립트 테스트
 - 원티드 DS에 있는 컴포넌트를 새로 그리지 않습니다. DS에 없는 구조는 `[DS 없음 · 조합]`으로 표시합니다.
 - 변수에 연결하지 않은 색을 쓰지 않습니다. 모든 화면은 Light·Dark 쌍입니다.
 - 에이전트는 자기 Figma 페이지 밖의 노드를 만들거나 지우지 않습니다.
-- Bash로 `runs/`에 파일을 쓰지 않습니다 (hook이 보지 못함).
+- Bash 는 허용 목록 명령만 씁니다 (읽기 명령, 위 verify.mjs 명령, 테스트). 셸 연결(`&&` `;` `|`)·리다이렉션·변수·따옴표는 guard-bash.mjs 가 막습니다. 파일 저장은 Write 도구로.
 
 ## 강제 장치
 
-- `.claude/settings.json` hook: `guard-write.mjs`(쓰기 권한), `guard-review.mjs`(확인 대기 중 에이전트 호출 차단)
-- `judge` frontmatter: `guard-judge-bash.mjs`(verify.mjs 판정 명령만 허용)
+- `.claude/settings.json` hook: `guard-write.mjs`(Write·Edit·NotebookEdit 쓰기 권한), `guard-bash.mjs`(Bash 허용 목록·역할별 명령), `guard-review.mjs`(확인 대기 중 에이전트 호출 차단)
+- `judge` frontmatter: `guard-judge-bash.mjs`(verify.mjs 판정 명령·지문 코드만), `guard-judge-read.mjs`(Read 만, export 금지)
 - 승인 잠금: G3-선택 승인 시 설계·시안·approval 해시를 기록. 이후 바뀌면 승인 무효, P4·P5 판정 중지.

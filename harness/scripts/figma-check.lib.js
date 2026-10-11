@@ -67,6 +67,17 @@ function checkFramesCore(frames, F, localComponents) {
       const ok = (n.type === "INSTANCE" && n.hasIcon) || nodes.some((s) => s.id !== n.id && s.parent === n.parent && (isIcon(s) || s.hasIcon));
       if (!ok) v.push(`★1 가동 정지 아이콘 없음: ${tag} ${n.name} (${n.id}) — 색+아이콘+텍스트를 함께 써야 함`);
     }
+    // ★1 원문: 정지 라벨과 같은 묶음에 '정상'·'가동 중'이 함께 있으면 정상처럼 보임
+    for (const n of nodes) {
+      const txt = (n.text || "").trim();
+      if (!txt.includes(F.stop_text) || txt.length > F.stop_label_max_len) continue;
+      const clash = nodes.find((s) => s.parent === n.parent && s.id !== n.id && (F.stop_conflict_texts || []).includes((s.text || "").trim()));
+      if (clash) v.push(`★1 정지 설비가 정상으로 보임: ${tag} '${txt}' 옆에 '${clash.text.trim()}' (${n.id})`);
+    }
+    // ★2 원문: 제출 기록 수정·삭제 버튼 금지
+    for (const n of nodes)
+      if (n.type === "INSTANCE" && /^Button/.test(n.component || "") && (F.record_edit_labels || []).includes((n.text || "").trim()))
+        v.push(`★2 기록 수정·삭제 버튼: ${tag} '${n.text.trim()}' (${n.id}) — 정정은 '정정 기록 남기기'로`);
   }
   for (const c of localComponents || [])
     if (!c.includes(F.local_component_tag)) v.push(`DS 없음 미표기: 로컬 컴포넌트 '${c}' — 원티드 DS에 있는 건 인스턴스로, 없는 건 '[DS 없음 · 조합]' 표기`);

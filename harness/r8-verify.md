@@ -28,10 +28,10 @@
 
 ## 3. 완료 체크리스트 (GitHub 업로드 전)
 
-- [ ] defaults.yaml의 값마다 `source`가 붙어 있다
-- [ ] design.md의 색·타이포·간격·모서리 값이 rules.yaml에 그대로 있다
-- [ ] `source: 임의` 값을 사람이 검토했다
-- [ ] traceability.md에 검사 없는 규칙이 없다
-- [ ] `.claude/settings.json`과 `harness/scripts/guard-*.mjs`가 저장소에 포함됐다
-- [ ] 폴더·단계 이름을 바꾼 뒤 옛 경로가 남은 문서가 없다
-- [ ] `node tests/run.mjs`가 전부 통과한다
+- [x] defaults.yaml의 값마다 `source`가 붙어 있다
+- [x] design.md의 색·타이포·간격·모서리 값이 rules.yaml에 그대로 있다 — 간격·모서리·글자 규격은 T37 이 자동 비교
+- [ ] `source: 임의` 값을 사람이 검토했다 — **미완료**: frame_gap·label_offset·uibowl_queries·concept_axes·p4 기본값은 실행에서 사용자 지시로 덮어써졌고, 값 자체 검토 기록은 없음
+- [x] traceability.md에 검사 없는 규칙이 없다 — 남은 빈틈(사람 검토 몫)은 문서 끝에 명시
+- [x] `.claude/settings.json`과 `harness/scripts/guard-*.mjs`가 저장소에 포함됐다 (웹 업로드가 숨김 파일을 건너뛰어 따로 올림)
+- [x] 폴더·단계 이름을 바꾼 뒤 옛 경로가 남은 문서가 없다 (2차 보강에서 r5 `qa` 명령·reopen 범위 정리)
+- [x] `node tests/run.mjs`가 전부 통과한다 (41/41)

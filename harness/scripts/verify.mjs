@@ -8,8 +8,12 @@
 //   node harness/scripts/verify.mjs <g3|g4|g5> <slug> --figma-digest <지문>
 //   node harness/scripts/verify.mjs figma-code <g3|g4|g5> <slug> [--mode export]   # Figma에서 실행할 검사 코드 (기본 digest = judge용)
 //   node harness/scripts/verify.mjs status <slug>
-//   node harness/scripts/verify.mjs proceed <slug>   # G1·G2 통과 후 사용자가 "진행해"라고 했을 때만
-//   node harness/scripts/verify.mjs unblock <slug>   # 사용자가 요청할 때만
+//   figma-code … --mode export --page all                         # 모든 페이지 점검 (게이트 밖 화면용)
+//   ── 아래 4개는 사람 전용: 에이전트의 Bash 는 guard-bash.mjs 가 막는다. 사람이 터미널이나 Claude Code '!' 입력으로 실행 ──
+//   node harness/scripts/verify.mjs proceed <slug>   # G1·G2 통과 후 사용자가 "진행해"라고 했을 때
+//   node harness/scripts/verify.mjs unblock <slug>   # 연속 실패 차단 해제
+//   node harness/scripts/verify.mjs sign <slug>      # approval.md 를 사람이 확인했다는 서명 (없으면 g3-approval 대기)
+//   node harness/scripts/verify.mjs reopen <slug> --from <g1|g2|g3>   # 승인 전 수정 → 재판정
 //
 // 종료 코드: 0 통과 · 1 실패/대기 · 2 사용법·전제 오류 · 3 차단(같은 게이트 연속 실패 한도)
 
@@ -23,7 +27,10 @@ import { fnv, buildFigmaCode } from "./figma-code.mjs";
 const HARNESS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = path.resolve(HARNESS_DIR, "..");
 const R = YAML.parse(fs.readFileSync(path.join(HARNESS_DIR, "rules.yaml"), "utf8"));
-const RUNS = process.env.HARNESS_RUNS ? path.resolve(process.env.HARNESS_RUNS) : path.join(ROOT, R.run.runs_dir);
+// HARNESS_RUNS 는 테스트 전용: tests/.tmp 안을 가리킬 때만 따른다 (3차 보강 — 환경변수로 다른 runs 를 기준 삼는 우회 차단)
+const _envRuns = process.env.HARNESS_RUNS ? path.resolve(process.env.HARNESS_RUNS) : null;
+const _testRoot = path.join(ROOT, "tests", ".tmp");
+const RUNS = _envRuns && (_envRuns === _testRoot || _envRuns.startsWith(_testRoot + path.sep)) ? _envRuns : path.join(ROOT, R.run.runs_dir);
 
 // ───────────────────────────── 공통 도구
 const out = (s = "") => process.stdout.write(s + "\n");
@@ -158,12 +165,24 @@ function loadExport(slug, gate, digestArg) {
   try { ex = JSON.parse(raw); } catch { return { err: [`${R.figma.export_file}: JSON 아님`] }; }
   if (ex.version !== 2 || !Array.isArray(ex.violations)) return { err: [`${R.figma.export_file}: 형식이 다릅니다 (version 2 필요). figma-code 로 다시 뽑으세요.`] };
   const v = [];
+  // 4차: export·지문은 이 실행의 Figma 파일(state.fileKey)에서 나와야 함 — 다른(위반 없는) 파일에서 뽑은 export 차단
+  const stFile = loadState(slug).fileKey;
+  if (!stFile || ex.fileKey !== stFile) v.push(`export 가 이 실행의 Figma 파일(${stFile})이 아닌 다른 파일(${ex.fileKey ?? "없음"})에서 나왔습니다.`);
   const summary = { frames: ex.frames, localComponents: ex.localComponents, violationCount: ex.violationCount, violations: ex.violations };
   const tail = fnv(JSON.stringify(summary));
   if (!String(ex.digest ?? "").endsWith(`-${tail}`)) v.push(`export 지문 불일치: 파일 안 요약(프레임·위반 목록)이 Figma가 계산한 값과 다름 — export를 손으로 고쳤을 수 있음`);
   if (R.figma.require_digest) {
     if (!digestArg) return { err: [`--figma-digest 가 필요합니다. judge가 'verify.mjs figma-code ${gate} ${slug}' 코드를 Figma에서 실행한 값을 넘기세요.`], usage: true };
-    if (digestArg !== ex.digest) v.push(`Figma 실물 지문(${digestArg}) ≠ export 지문(${ex.digest}) — export 이후 Figma가 바뀌었거나 다른 파일입니다. export를 다시 뽑으세요.`);
+    // 지문 값은 메시지에 싣지 않는다 — 틀린 값을 넣어 정답을 알아내는 길을 막음 (3차 보강)
+    if (digestArg !== ex.digest) v.push(`Figma 실물 지문 ≠ export 지문 — export 이후 Figma가 바뀌었거나 다른 파일입니다. export를 다시 뽑으세요.`);
+    // 지문 출처 확인 (3차 보강): judge 의 use_figma 결과를 PostToolUse hook(record-judge-digest.mjs)이 기록한 값과 같아야 하고, export 저장 뒤에 계산된 것이어야 함
+    if (R.figma.require_judge_record) {
+      const page = gate === "g3" ? R.g3.page : R.g4.page;
+      let rec; try { rec = JSON.parse(read(path.join(RUNS, R.figma.judge_record_file)) || "{}")[`${ex.fileKey}::${page}`]; } catch {}
+      if (!rec) v.push(`judge 가 Figma 에서 계산한 지문 기록이 없습니다 — judge 가 'figma-code ${gate} ${slug}' 코드를 use_figma 로 직접 실행해야 합니다.`);
+      else if (rec.digest !== digestArg) v.push(`넘긴 지문이 judge 의 Figma 실행 기록과 다릅니다 — 다른 곳에서 받은 값은 쓸 수 없습니다.`);
+      else if (Date.parse(rec.at) < fs.statSync(p).mtimeMs - 1000) v.push(`judge 지문 기록이 export 저장보다 먼저입니다 — export 를 저장한 뒤 judge 가 다시 계산해야 합니다.`);
+    }
   }
   v.push(...ex.violations);
   if (ex.violationCount > ex.violations.length) v.push(`(위반 ${ex.violationCount - ex.violations.length}건 더 있음 — 앞의 것부터 고치세요)`);
@@ -190,7 +209,7 @@ function checkG3(slug, digestArg) {
     const ph = placeholderHits(md);
     if (ph.length) v.push(`${C.concepts.file}: 템플릿 미작성 표시 ${ph.length}개`);
     const cs = blocks(md.replace(/^##\s+시안/gm, "### 시안"), C.concepts.concept_heading.replace("^##", "^###"));
-    for (const k of ["A", "B", "C"]) {
+    for (const k of C.frames.name_prefixes.map((p) => p.replace(/-$/, ""))) {
       const c = cs.find((x) => x.m[1] === k);
       if (!c) { v.push(`${C.concepts.file}: '## 시안 ${k}' 없음`); continue; }
       const n = c.body.split("\n").filter((l) => new RegExp(C.concepts.solved_pattern).test(l)).length;
@@ -203,14 +222,18 @@ function checkG3(slug, digestArg) {
 
 function lockCheck(slug, st) {
   if (!st.approval) return [`승인 기록 없음 — g3-approval 을 먼저 통과해야 함`];
-  const now = Object.fromEntries(R.g3_approval.lock_files.map((f) => [f, sha(read(path.join(runDir(slug), f)))]));
+  // 잠금 대상이 승인 기록에 없으면 건너뛰지 않고 실패 (3차 보강: fail-closed) — 사람이 다시 승인해야 함
+  const missing = R.g3_approval.lock_files.filter((f) => !(f in st.approval.hashes));
+  if (missing.length) return [`🔒 승인 기록에 ${missing.join(", ")} 잠금이 없습니다. 이 승인은 지금 규칙으로 잠기지 않았으므로 사람이 approval.md 를 다시 확인한 뒤 g3-approval 을 다시 판정하세요.`];
+  const files = R.g3_approval.lock_files;
+  const now = Object.fromEntries(files.map((f) => [f, sha(read(path.join(runDir(slug), f)))]));
   const changed = Object.keys(now).filter((f) => now[f] !== st.approval.hashes[f]);
   if (!changed.length) return [];
   // 승인 무효 처리
-  const ap = path.join(runDir(slug), "p3-concept", "approval.md");
+  const ap = path.join(runDir(slug), dirOf("g3"), R.g3_approval.file);
   if (fs.existsSync(ap)) {
-    let n = 1; while (fs.existsSync(path.join(runDir(slug), "p3-concept", `approval-stale-${n}.md`))) n++;
-    fs.renameSync(ap, path.join(runDir(slug), "p3-concept", `approval-stale-${n}.md`));
+    let n = 1; while (fs.existsSync(path.join(runDir(slug), dirOf("g3"), `approval-stale-${n}.md`))) n++;
+    fs.renameSync(ap, path.join(runDir(slug), dirOf("g3"), `approval-stale-${n}.md`));
   }
   st.passed = st.passed.filter((g) => !["g3-approval", "g4", "g5"].includes(g));
   st.approval = null;
@@ -239,15 +262,30 @@ function checkG4(slug, st, digestArg) {
   return { v };
 }
 
+// G5 전용: 확장 결과가 승인된 시안과 이어지는지, 화면 목록이 Figma 실물과 같은지
+function checkG5Extra(slug, st) {
+  const v = [];
+  const sm = read(path.join(runDir(slug), dirOf("g4"), R.g4.screens_file)) ?? "";
+  const ex = JSON.parse(read(path.join(runDir(slug), dirOf("g4"), R.figma.export_file)) ?? "{}");
+  const pick = sm.match(/선택안\s*[:：]\s*([ABC])\b/)?.[1];
+  if (!st.approval) v.push("승인 기록 없음");
+  else if (pick !== st.approval.choice) v.push(`screens.md 선택안(${pick ?? "없음"}) ≠ 승인한 시안(${st.approval.choice})`);
+  for (const f of ex.frames ?? []) if (!sm.includes(f.id)) v.push(`screens.md 에 Figma 프레임 '${f.name}'(${f.id}) 이 없음 — 화면 목록과 실물이 다름`);
+  return v;
+}
+
 function checkApproval(slug, st) {
   const C = R.g3_approval;
-  const p = path.join(runDir(slug), "p3-concept", C.file);
+  const p = path.join(runDir(slug), dirOf("g3"), C.file);
   const md = read(p);
   if (!md) return { wait: true, v: [`⏳ 시안 선택 대기: runs/${slug}/p3-concept/approval.md 를 사람이 작성해야 합니다 (템플릿: harness/templates/approval.md).`] };
   if (placeholderHits(md).length) return { wait: true, v: [`⏳ approval.md 에 템플릿 미작성 표시가 남아 있습니다.`] };
   const choice = md.match(new RegExp(C.choice_pattern))?.[1];
   const verdict = md.match(new RegExp(C.verdict_pattern))?.[1];
   if (!choice || !verdict) return { wait: true, v: [`⏳ approval.md 에 '선택: A|B|C' 와 '판정: 승인|반려' 가 있어야 합니다.`] };
+  if (verdict === "승인" && choice === "없음") return { wait: true, v: [`⏳ 승인하려면 선택: A|B|C 중 하나가 필요합니다.`] };
+  // 사람 서명 (3차 보강): approval.md 를 누가 썼든, 사람이 '! node harness/scripts/verify.mjs sign <slug>' 로 지금 내용을 확인해야 판정한다 (sign 은 에이전트가 실행 불가)
+  if (!st.signed || st.signed.hash !== sha(md)) return { wait: true, v: [`⏳ 사람 서명 대기: 사용자가 approval.md 내용을 확인한 뒤 직접 '! node harness/scripts/verify.mjs sign ${slug}' 를 실행해야 합니다.${st.signed ? " (서명 뒤 approval.md 가 바뀌었습니다)" : ""}`] };
   if (verdict === "승인") {
     const hashes = Object.fromEntries(C.lock_files.map((f) => [f, sha(read(path.join(runDir(slug), f)))]));
     st.approval = { choice, at: new Date().toISOString(), hashes };
@@ -256,8 +294,9 @@ function checkApproval(slug, st) {
   const reason = md.match(new RegExp(C.reason_pattern))?.[1];
   if (!reason) return { wait: true, v: [`⏳ 반려일 때는 '반려 사유 분류: 방향|문제 정의' 가 필요합니다.`] };
   const back = C.return_to[reason];
-  let n = 1; while (fs.existsSync(path.join(runDir(slug), "p3-concept", `approval-rejected-${n}.md`))) n++;
-  fs.renameSync(p, path.join(runDir(slug), "p3-concept", `approval-rejected-${n}.md`));
+  let n = 1; while (fs.existsSync(path.join(runDir(slug), dirOf("g3"), `approval-rejected-${n}.md`))) n++;
+  fs.renameSync(p, path.join(runDir(slug), dirOf("g3"), `approval-rejected-${n}.md`));
+  st.signed = null;
   const drop = back === "g2" ? ["g2", "g3"] : ["g3"];
   st.passed = st.passed.filter((g) => !drop.includes(g));
   st.log.push({ at: new Date().toISOString(), event: "rejected", reason, back });
@@ -336,6 +375,7 @@ if (cmd === "init") {
   if (!topic) die(2, `❗ --topic "<화면 주제>" 가 필요합니다.`);
   if (fs.existsSync(statePath(slug))) die(2, `❗ runs/${slug} 는 이미 있습니다. 'status ${slug}' 로 확인하세요.`);
   const figma = flag("--figma", [a2, ...rest]) ?? null;
+  if (R.figma.require_judge_record && !figma?.match(/figma\.com\/(?:design|file)\/[A-Za-z0-9]+/)) die(2, `❗ --figma <작업 파일 URL> 이 필요합니다 (지문을 이 파일에 묶기 위해).`); // 5차
   for (const g of R.gates.order) if (dirOf(g)) fs.mkdirSync(path.join(runDir(slug), dirOf(g)), { recursive: true });
   const st = { slug, topic, figma, fileKey: figma?.match(/figma\.com\/(?:design|file)\/([A-Za-z0-9]+)/)?.[1] ?? null,
     created: new Date().toISOString(), passed: [], attempts: {}, awaiting: null, blocked: null, approval: null, done: false, log: [] };
@@ -351,6 +391,17 @@ if (cmd === "status") {
   out(`연속 실패: ${JSON.stringify(st.attempts)}`);
   if (st.approval) out(`승인: 시안 ${st.approval.choice} (${st.approval.at})`);
   process.exit(0);
+}
+
+if (cmd === "sign") {
+  // 사람 전용: approval.md 를 사람이 확인했다는 서명 (내용 해시를 기록 — 이후 바뀌면 다시 서명)
+  const st = loadState(a1);
+  const md = read(path.join(runDir(a1), dirOf("g3"), R.g3_approval.file));
+  if (!md) die(2, `❗ runs/${a1}/p3-concept/approval.md 가 없습니다.`);
+  st.signed = { hash: sha(md), at: new Date().toISOString() };
+  st.log.push({ at: st.signed.at, event: "signed" });
+  saveState(a1, st);
+  die(0, `✍️ approval.md 서명 완료 — 이제 judge 가 g3-approval 을 판정합니다.`);
 }
 
 if (cmd === "proceed") {
@@ -390,10 +441,11 @@ if (cmd === "unblock") {
 
 if (cmd === "figma-code") {
   const gate = a1, slug = a2;
-  if (!["g3", "g4", "g5"].includes(gate)) die(2, `❗ figma-code 는 g3|g4|g5 만`);
+  if (!R.gates.figma_gates.includes(gate)) die(2, `❗ figma-code 는 ${R.gates.figma_gates.join("|")} 만`);
   const st = loadState(slug);
   const mode = flag("--mode", rest) === "export" ? "export" : "digest";
-  const page = gate === "g3" ? R.g3.page : R.g4.page;
+  const pg = flag("--page", rest);
+  const page = pg === "all" ? "*" : pg ?? (gate === "g3" ? R.g3.page : R.g4.page); // --page all = 모든 페이지 (게이트 밖 점검용)
   out(`fileKey: ${st.fileKey ?? "(state.json 에 fileKey 없음 — init --figma 로 지정)"}`);
   out(`===== use_figma code (${mode}, 한 글자도 바꾸지 말고 실행) =====`);
   out(buildFigmaCode({ mode, page }));
@@ -417,9 +469,10 @@ if (R.gates.order.includes(cmd)) {
   if (gate === "g5") {
     const res = checkG4(slug, st, dg);
     if (res.usage || res.lock) finish(slug, st, gate, res);
+    res.v = res.v.concat(checkG5Extra(slug, st)); // G5 에만 있는 검사
     writeReport(slug, st, res.v, dg);
     finish(slug, st, gate, res);
   }
 }
 
-die(2, `사용법: verify.mjs <init|status|proceed|unblock|figma-code|${R.gates.order.join("|")}> <slug> ...`);
+die(2, `사용법: verify.mjs <init|status|proceed|unblock|reopen|sign|figma-code|${R.gates.order.join("|")}> <slug> ...`);

@@ -48,12 +48,14 @@ async function modeOf(frame) {
   return "Light";
 }
 
-const page = figma.root.children.find((p) => p.name === PAGE_NAME);
-if (!page) return { error: `페이지 '${PAGE_NAME}' 없음`, pages: figma.root.children.map((p) => p.name) };
-await figma.setCurrentPageAsync(page);
+// PAGE_NAME "*" = 파일의 모든 페이지 (게이트 밖 화면 점검용 — 'verify.mjs figma-code <gate> <slug> --page "*"')
+const pages = PAGE_NAME === "*" ? figma.root.children : figma.root.children.filter((p) => p.name === PAGE_NAME);
+if (!pages.length) return { error: `페이지 '${PAGE_NAME}' 없음`, pages: figma.root.children.map((p) => p.name) };
 
 const frames = [];
 const localComponents = [];
+for (const page of pages) {
+await figma.setCurrentPageAsync(page);
 const tops = page.children.filter((n) => n.type === "FRAME").sort((a, b) => (a.x - b.x) || (a.y - b.y));
 for (const n of page.children) if (n.type === "COMPONENT" || n.type === "COMPONENT_SET") localComponents.push(n.name);
 for (const fr of tops) {
@@ -97,11 +99,12 @@ for (const fr of tops) {
     nodes.push(rec);
     if ("children" in n) for (const c of n.children) await visit(c, n.id, inViz);
   }
-  const root = { id: fr.id, name: fr.name, width: Math.round(fr.width), height: Math.round(fr.height), mode: await modeOf(fr), fills: await paints(fr.fills) };
+  const root = { id: fr.id, name: PAGE_NAME === "*" ? `${page.name} / ${fr.name}` : fr.name, width: Math.round(fr.width), height: Math.round(fr.height), mode: await modeOf(fr), fills: await paints(fr.fills) };
   if ("cornerRadius" in fr && fr.cornerRadius !== figma.mixed) root.radius = Math.round(fr.cornerRadius);
   for (const c of fr.children) await visit(c, fr.id, false);
   root.nodes = nodes;
   frames.push(root);
+}
 }
 
 const all = checkFramesCore(frames, F, localComponents);

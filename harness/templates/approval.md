@@ -4,3 +4,5 @@
 판정: {{승인|반려}}
 반려 사유 분류: {{방향|문제 정의}}   <!-- 반려일 때만 -->
 메모: {{선택 이유나 P4에서 반영할 점}}
+
+<!-- 다 쓰면 터미널(또는 Claude Code '!')에서 직접: node harness/scripts/verify.mjs sign <slug> -->

@@ -53,3 +53,22 @@
 - 사용자가 결과를 새 Figma 파일(Checkline)에 직접 붙여넣음 → 원티드 컴포넌트·변수는 발행 안 된 복제 파일을 원격 참조. 새 요소는 붙여넣은 인스턴스의 메인 컴포넌트·변수를 찾아 재사용(harness/figma-build/checkline-*.figma.js).
 - 사용자 요청 "메뉴도 없는데" → 태블릿 메뉴 레일, 모바일 하단 탭 추가(웹은 기존 사이드 내비).
 - 서브페이지 "수리 배정" 추가: HTML 구성안 → Figma 6장 → 화면 규칙 검사만 적용(runs/repair-assign/check.md). 정식 실행(P1~P5)은 생략 — 대시보드 실행이 수리 흐름을 이미 진단·설계함.
+
+## 2차 보강 (2026-10-10 21:30~, 독립 채점 66/100 이후)
+- 채점자(처음 보는 에이전트)가 직접 우회 재현: judge 에 `cd "$(touch …)" && node …`, 확인 대기 중 general-purpose 호출, 실행 중 `.claude/settings.json` 수정, export 의 digest 를 그대로 넣어 G4·G5 통과 → 모두 통과됐음.
+- 보완: `guard-bash.mjs`(Bash 로 보호 폴더 쓰기·sed -i·인라인 스크립트 쓰기·git 되돌리기·사람 전용 명령 차단), `guard-judge-read.mjs`(judge 의 figma-export 읽기 차단), judge Bash 는 셸 연결·치환 문자 금지, 모든 guard fail-closed, guard-write 가 실행 중 `.claude/`·`tests/` 도 보호.
+- 작업 에이전트 4개 `tools:` 지정 (r6 표와 일치). spec-writer 는 읽기 전용, researcher 는 UIBowl 4종만.
+- story ★1·★2 원문을 Figma 에서도 검사 (`stop_conflict_texts`, `record_edit_labels`), 승인 잠금에 `p3-concept/figma-export.json` 추가(이전 승인에는 없던 항목은 비교에서 제외), G5 전용 검사(선택안=승인 시안, 화면 목록=Figma 실물), 전부 반려 시 `선택: 없음`.
+- 검사 코드를 손으로 고친 사본(checkline-rule-check) 삭제 → 생성기에 `--page "*"` 추가 (3차 보강에서 따옴표 없는 `--page all` 로 바꿈). Checkline 12장을 생성 코드로 재검사(위반 0, 지문 eebf8680-2650-e828e029).
+- 테스트 T25~T38 추가 (42개). T37 은 design.md·figma-build 값이 rules.yaml 과 같은지 비교(SSOT).
+- 남은 한계: 이번 실행 자체가 hook 없이 진행된 사실, approval.md 대리 작성, UIBowl 링크가 개별 화면이 아닌 검색 URL 인 점(references.md)은 기록으로만 남김.
+
+## 3차 보강 (2026-10-10, 2차 독립 채점 62/100 이후)
+- 채점자가 직접 재현한 우회: 틀린 지문을 넣으면 실패 메시지에 정답 지문이 찍힘 → 그 값으로 G3 통과 / `verify.mjs "proceed"`·`pro''ceed`·`$A` 변수 / `cd runs/a && echo >` / heredoc python / `fs['write'+'File'+'Sync']` / sponge·vim·`sed -e … -i` / 외부 `.mjs` 실행 / 작업 에이전트가 판정 명령 직접 실행 / judge 의 폴더 Grep·Glob 으로 export 읽기 / NotebookEdit 무검사 / guard-review·guard-judge-bash import 실패 시 통과.
+- 보완: guard-bash 를 **허용 목록**으로 다시 씀(`rules.yaml guard`), 판정 명령은 hook 입력의 `agent_type` 으로 judge 만, 작업 에이전트 tools 에서 Bash 제거(export 코드는 오케스트레이터가 실행해 넘김), judge tools 에서 Grep·Glob 제거 + hook 으로도 차단, 지문 값 메시지 비노출, 승인 잠금 누락 = 실패, NotebookEdit matcher 추가, guard 4개 모두 import·규칙 실패 시 exit 2, guard-judge-bash 의 페이지 이름·slug 를 rules.yaml 에서 읽음.
+- SSOT 테스트 확대(색 변수·텍스트 스타일·터치 높이) → design.md 에 `Static/White`·`Static/Black` 이 빠져 있던 것을 발견해 추가.
+- 테스트 T39~T44 추가, T30~T32 강화.
+- 3차 채점(75/100) 지적 반영: 지문 출처 기록(PostToolUse `record-judge-digest.mjs`), 사람 서명 `sign`, guard-write 경로 대소문자·링크 정규화, 실행 중 ~/.claude 쓰기 차단, `HARNESS_RUNS` 테스트 폴더 한정, 실행 중 메인 use_figma 차단 (T46~T50).
+- 4차 채점(74/100) 지적 반영: `.git/config` fsmonitor 로 `git status` 가 임의 명령을 실행하는 길 → git 을 허용 목록에서 빼고 `.git` 등 상시 보호(HARNESS_DEV=1 예외), general-purpose 로 역할 우회 → 실행 중 하네스 에이전트만, 다른 Figma 파일 export → fileKey 대조, SSOT 중복(`p3-concept`·g3~g5·지문 정규식) 정리 (T51~T53).
+- 5차 채점(80/100) 지적 반영: 실행 전 `~/.claude/settings.json` 에 disableAllHooks 를 심는 길, 확인 대기 중 메인이 다음 단계 산출물을 직접 쓰는 길, `--figma` 없이 init 해 fileKey 대조를 끄는 길, use_figma 외 Figma 쓰기 도구 → 모두 차단 (T54).
+- 실제 Claude Code 세션(headless)으로 hook 실동작 확인 → judge frontmatter hook 이 발동하지 않는 것을 발견, settings 로 이중화(T45). 두 번째 세션에서 13건 모두 의도대로 (`evidence/hook-live/`). 테스트 49개.

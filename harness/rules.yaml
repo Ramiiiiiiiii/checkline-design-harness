@@ -23,6 +23,8 @@ gates:
   review_after: [g1, g2] # 통과 후 사용자 "진행해" 필요 (verify.mjs proceed)
   reopenable: [g1, g2, g3] # 승인 전 수정 → 재판정 (P3 3차: G3 통과 후 승인 전에 시안을 고친 경우)
   work_agents: [researcher, spec-writer, concept-designer, expander]
+  figma_agents: [concept-designer, expander] # use_figma 로 디자인을 만드는 에이전트 (실행 중 메인·기타 에이전트는 금지)
+  figma_gates: [g3, g4, g5] # Figma 지문으로 판정하는 게이트
 
 # ─────────────────────────────────────────────
 # G1 — P1 진단
@@ -73,6 +75,9 @@ g2:
 figma:
   export_file: figma-export.json
   require_digest: true # judge가 Figma에서 다시 계산한 지문과 export 지문이 같아야 함
+  require_judge_record: true # 그 지문이 judge 의 use_figma 실행 기록(PostToolUse hook)과 같아야 함 (3차 보강)
+  judge_record_file: .judge-digests.json # runs/ 바로 아래, record-judge-digest.mjs 만 씀 (키: <fileKey>::<page>)
+  digest_pattern: "^[0-9a-f]{8}-\\d+-[0-9a-f]{8}$" # 지문 형식 (verify·guard·hook 공용)
   # design.md 2장 — 허용 변수 (Theme 컬렉션 이름)
   allowed_color_variables:
     - Primary/Normal
@@ -152,6 +157,10 @@ figma:
   no_translucent_outside_viz: true # ⑪ [시각화] 밖에서 레이어 불투명도 < 1 금지 (아이콘·배지 뒤 옅은 바탕 차단)
   focus_tag: "[주목]" # ⑫ 시선이 갈 영역 — 프레임마다 정확히 focus_per_frame 개
   focus_per_frame: 1
+  # story-service ★1 원문 — 정지 설비가 '정상'·'가동 중'으로 보이면 안 됨: '가동 정지' 라벨과 같은 묶음에 이 글자가 함께 있으면 위반
+  stop_conflict_texts: ["정상", "가동 중"]
+  # story-service ★2 원문 — 제출된 기록은 수정·삭제 불가: 이 라벨의 버튼(DS Button 인스턴스)이 화면에 있으면 위반
+  record_edit_labels: ["수정", "삭제", "기록 수정", "기록 삭제", "수정하기", "삭제하기"]
 
 g3:
   page: P3 시안
@@ -168,10 +177,10 @@ g3:
 
 g3_approval:
   file: approval.md
-  choice_pattern: "선택\\s*[:：]\\s*([ABC])\\b"
+  choice_pattern: "선택\\s*[:：]\\s*([ABC]|없음)" # 전부 반려면 "없음"
   verdict_pattern: "판정\\s*[:：]\\s*(승인|반려)"
   reason_pattern: "반려 사유 분류\\s*[:：]\\s*(방향|문제 정의)"
-  lock_files: [p2-spec/screen-spec.md, p3-concept/concepts.md, p3-concept/approval.md]
+  lock_files: [p2-spec/screen-spec.md, p3-concept/concepts.md, p3-concept/approval.md, p3-concept/figma-export.json] # 승인 뒤 시안 검사 결과도 바꿀 수 없음
   return_to: { 방향: g3, 문제 정의: g2 }
 
 g4:
@@ -189,3 +198,19 @@ g4:
 g5:
   report_file: qa-report.md
   report_dir: p5-qa
+
+# ─────────────────────────────────────────────
+# hook 강제 (guard-*.mjs 가 읽음) — 3차 보강: 금지 목록 → 허용 목록
+# ─────────────────────────────────────────────
+guard:
+  judge_agent: judge
+  protected_dirs: [docs, harness, .claude, tests] # 실행 중 고칠 수 없는 폴더 (규칙·스크립트·hook·테스트)
+  human_only: [proceed, unblock, reopen, sign] # 사람이 '! node …' 로만 실행
+  judge_only: [g1, g2, g3, g3-approval, g4, g5] # 판정 명령 + figma-code 지문(digest) 모드
+  main_only: [init] # 오케스트레이터(메인 세션)만 + figma-code --mode export
+  shell_forbidden_chars: ";&|`$<>(){}[]\\'\"*?!~#\n\r\t" # 연결·치환·리다이렉션·따옴표·글롭 금지 (init --topic "…" 만 예외)
+  readonly_commands: [ls, cat, head, tail, wc, grep, diff, pwd]
+  banned_flags: ["--pre", "--output", "--exec", "-exec"] # 읽기 명령의 실행·쓰기 옵션
+  # git 은 허용하지 않음 (4차: .git/config 의 fsmonitor·textconv 로 git status 가 임의 명령을 실행할 수 있음)
+  always_protected: [.git, .mcp.json, .gitattributes, .gitmodules, CLAUDE.md, .claude, harness, docs, tests, evidence] # 실행 여부와 무관하게 에이전트가 고치지 못함
+  dev_env: HARNESS_DEV # 사람이 HARNESS_DEV=1 로 Claude Code 를 띄웠을 때만, 실행 중이 아닐 때 규칙·hook 수정 허용

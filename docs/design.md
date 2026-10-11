@@ -42,6 +42,8 @@
 | 페이지 바탕 덧칠 (P3 3차 사용자 요청 "배경 살짝 어둡게") | `Fill/Alternative` (Background/Normal/Alternative 위에 한 겹) | #70737C · 5% | #70737C · 12% |
 | 비활성 배경 | `Interaction/Disable` | #F4F4F5 | #2E2F33 |
 | 딤 | `Material/Dimmer` | #171719 · 52% | #171719 · 74% |
+| 고정 흰색 (Primary 버튼 위 글자 등, 모드와 무관) | `Static/White` | #FFFFFF | #FFFFFF |
+| 고정 검은색 (모드와 무관) | `Static/Black` | #000000 | #000000 |
 
 ### 2-2. 설비 상태 매핑 (체크라인 전용 규칙)
 
